@@ -64,9 +64,10 @@ def console_summary(result: CrawlResult, findings: Findings) -> str:
         ("Redirect chains", len(findings.redirect_chains)),
         ("Pages missing a title", len(findings.missing_titles)),
     ]
+    pages, links = len(result.pages), len(result.links)
     lines = [
         f"\nSite Health Report for {result.start_url}",
-        f"Crawled {len(result.pages)} pages and checked {len(result.links)} links in {result.duration:.1f}s\n",
+        f"Crawled {pages} page{'s' * (pages != 1)} and checked {links} link{'s' * (links != 1)} in {result.duration:.1f}s\n",
     ]
     lines += [f"  {'✗' if count else '✓'} {label}: {count}" for label, count in rows]
     for link in findings.broken_links[:10]:
