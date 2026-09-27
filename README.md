@@ -234,4 +234,4 @@ Issues and pull requests are welcome! On the roadmap:
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Reena%20Kotadiya-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/reena-kotadiya-1a7073170)
 
-💼 Need a website accessibility audit or test automation for your project? Let's connect on LinkedIn.
+💬 Questions, ideas or bugs? [Open an issue](https://github.com/Reenakotadiya/site-health-checker/issues).
