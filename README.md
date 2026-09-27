@@ -99,13 +99,43 @@ site-health-checker https://mysite.com --json results.json  # machine-readable o
 
 ## 🔄 Use It in CI/CD
 
-The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, so it can block a release automatically. Example GitHub Actions step:
+### Option 1: GitHub Action (easiest)
+
+Add this step to any workflow, with nothing to install:
 
 ```yaml
 - name: Check website health
-  run: |
-    pip install git+https://github.com/Reenakotadiya/site-health-checker.git
-    site-health-checker https://staging.mysite.com --min-score 90 --json results.json
+  uses: Reenakotadiya/site-health-checker@main
+  with:
+    url: https://staging.mysite.com
+    min-score: 90        # optional: fail if the accessibility score drops below 90
+```
+
+| Input | Default | What it does |
+|---|---|---|
+| `url` | (required) | Website to check |
+| `max-pages` | 100 | Maximum pages to crawl |
+| `min-score` | none | Fail the step if the accessibility score is below this |
+| `fail-on-problems` | true | Set to `false` to report without failing the build |
+| `report-path` | `site-health-report.html` | Where to save the HTML report |
+
+The results also appear as a **summary table on the workflow run page**, and the step exposes `accessibility-score` and `broken-links` as outputs. To keep the HTML report, add an upload step:
+
+```yaml
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: site-health-report
+    path: site-health-report.html
+```
+
+### Option 2: Any CI tool (Jenkins, GitLab, Azure DevOps…)
+
+The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, so any pipeline can block a release with it:
+
+```bash
+pip install git+https://github.com/Reenakotadiya/site-health-checker.git
+site-health-checker https://staging.mysite.com --min-score 90 --json results.json
 ```
 
 ---

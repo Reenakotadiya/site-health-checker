@@ -27,3 +27,27 @@ jobs:
 
       - name: Try the CLI on a real website
         run: site-health-checker https://example.com --max-pages 5 --no-fail
+
+      - name: Check the package builds for PyPI
+        run: |
+          pip install build
+          python -m build
+
+  github-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run this repo's GitHub Action
+        id: health
+        uses: ./
+        with:
+          url: https://example.com
+          max-pages: "5"
+          min-score: "90"
+
+      - name: Check the action's outputs
+        run: |
+          echo "Score: ${{ steps.health.outputs.accessibility-score }}, broken links: ${{ steps.health.outputs.broken-links }}"
+          test -n "${{ steps.health.outputs.accessibility-score }}"
+          test -f site-health-report.html

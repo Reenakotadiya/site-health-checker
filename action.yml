@@ -1,0 +1,74 @@
+name: Site Health Checker
+description: Audit a website for accessibility (WCAG) problems, broken links, slow pages, redirect chains and missing titles.
+author: Reena Kotadiya
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  url:
+    description: Website to check, e.g. https://staging.example.com
+    required: true
+  max-pages:
+    description: Maximum number of pages to crawl
+    default: "100"
+  min-score:
+    description: Fail the step if the accessibility score is below this number (leave empty to skip)
+    default: ""
+  fail-on-problems:
+    description: Fail the step on broken links or a low score. Set to "false" to only report.
+    default: "true"
+  report-path:
+    description: Where to save the HTML report
+    default: site-health-report.html
+
+outputs:
+  accessibility-score:
+    description: Site-wide accessibility score out of 100
+    value: ${{ steps.check.outputs.accessibility-score }}
+  broken-links:
+    description: Number of broken links found
+    value: ${{ steps.check.outputs.broken-links }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install Site Health Checker
+      shell: bash
+      run: pip install --quiet "${{ github.action_path }}"
+
+    - name: Check ${{ inputs.url }}
+      id: check
+      shell: bash
+      env:
+        URL: ${{ inputs.url }}
+        MAX_PAGES: ${{ inputs.max-pages }}
+        MIN_SCORE: ${{ inputs.min-score }}
+        FAIL: ${{ inputs.fail-on-problems }}
+        REPORT: ${{ inputs.report-path }}
+      run: |
+        args=("$URL" --max-pages "$MAX_PAGES" -o "$REPORT" --json site-health-results.json)
+        [ -n "$MIN_SCORE" ] && args+=(--min-score "$MIN_SCORE")
+        [ "$FAIL" = "false" ] && args+=(--no-fail)
+        status=0
+        site-health-checker "${args[@]}" || status=$?
+        python -c "
+        import json, os
+        data = json.load(open('site-health-results.json'))
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+            out.write(f\"accessibility-score={data['accessibility']['score']}\n\")
+            out.write(f\"broken-links={len(data['broken_links'])}\n\")
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+            summary.write(f\"### Site Health: {data['start_url']}\n\n\")
+            summary.write(f\"| Check | Result |\n|---|---|\n\")
+            summary.write(f\"| Accessibility score | {data['accessibility']['score']}/100 ({len(data['accessibility']['issues'])} issues) |\n\")
+            summary.write(f\"| Broken links | {len(data['broken_links'])} |\n\")
+            summary.write(f\"| Slow pages | {len(data['slow_pages'])} |\n\")
+            summary.write(f\"| Redirect chains | {len(data['redirect_chains'])} |\n\")
+            summary.write(f\"| Missing titles | {len(data['missing_titles'])} |\n\")
+        "
+        exit $status
