@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/Reenakotadiya/site-health-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/Reenakotadiya/site-health-checker/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/site-health-checker)](https://pypi.org/project/site-health-checker/)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/Reenakotadiya/site-health-checker/pkgs/container/site-health-checker)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -30,6 +31,14 @@ site-health-checker https://example.com
 ```
 
 Then open `site-health-report.html` in your browser.
+
+**No Python? Use Docker:**
+
+```bash
+docker run --rm -v "$PWD:/reports" ghcr.io/reenakotadiya/site-health-checker https://example.com
+```
+
+The report is saved in your current folder. Images are published for both `amd64` and `arm64` (including Apple Silicon Macs).
 
 ```
 Site Health Report for https://example.com/
@@ -148,14 +157,32 @@ jobs:
 
 > Pull requests from forks get a read-only token, so the comment is skipped with a warning. The check itself still runs normally.
 
-### Option 2: Any CI tool (Jenkins, GitLab, Azure DevOps…)
+### Option 2: Any CI tool (GitLab, Jenkins, Azure DevOps, Bitbucket…)
 
-The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, and with **code 2 if the website can't be loaded at all** (site down, typo in the address), so any pipeline can block a release with it:
+The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, and with **code 2 if the website can't be loaded at all** (site down, typo in the address), so any pipeline can block a release with it.
+
+With pip:
 
 ```bash
 pip install site-health-checker
 site-health-checker https://staging.mysite.com --min-score 90 --json results.json
 ```
+
+Or with the Docker image. For example, in **GitLab CI** (`.gitlab-ci.yml`):
+
+```yaml
+site-health:
+  image:
+    name: ghcr.io/reenakotadiya/site-health-checker:2
+    entrypoint: [""]
+  script:
+    - site-health-checker https://staging.mysite.com --min-score 90 -o site-health-report.html
+  artifacts:
+    when: always
+    paths: [site-health-report.html]
+```
+
+Docker tags: `latest`, the major version (`2`), or an exact version (`2.1.0`).
 
 ---
 
