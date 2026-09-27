@@ -12,6 +12,7 @@ from urllib.robotparser import RobotFileParser
 import requests
 
 from site_health_checker import __version__
+from site_health_checker.accessibility import Issue, audit_html
 
 USER_AGENT = f"site-health-checker/{__version__} (+https://github.com/Reenakotadiya/site-health-checker)"
 SKIPPED_SCHEMES = ("mailto:", "tel:", "javascript:", "data:", "#")
@@ -24,7 +25,7 @@ class PageResult:
     load_time: float
     is_html: bool = False
     title: str = ""
-    images_missing_alt: list[str] = field(default_factory=list)
+    a11y_issues: list[Issue] = field(default_factory=list)
     error: str = ""
 
 
@@ -54,7 +55,6 @@ class _PageParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.hrefs: list[str] = []
-        self.images_missing_alt: list[str] = []
         self.title = ""
         self._in_title = False
 
@@ -62,9 +62,6 @@ class _PageParser(HTMLParser):
         attrs = dict(attrs)
         if tag == "a" and attrs.get("href"):
             self.hrefs.append(attrs["href"])
-        elif tag == "img" and "alt" not in attrs:
-            # alt="" is valid for decorative images, so only a missing attribute is flagged.
-            self.images_missing_alt.append(attrs.get("src") or "(no src)")
         elif tag == "title":
             self._in_title = True
 
@@ -116,7 +113,7 @@ def _fetch_page(session: requests.Session, url: str, timeout: float) -> tuple[Pa
     parser = _PageParser()
     parser.feed(response.text)
     page.title = " ".join(parser.title.split())
-    page.images_missing_alt = parser.images_missing_alt
+    page.a11y_issues = audit_html(response.text)
     return page, response.url, parser.hrefs
 
 

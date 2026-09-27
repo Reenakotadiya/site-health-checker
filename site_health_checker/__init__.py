@@ -1,3 +1,3 @@
-"""Audit any website for broken links, slow pages, missing alt text, redirect chains and missing titles."""
+"""Audit any website for accessibility problems, broken links, slow pages, redirect chains and missing titles."""
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

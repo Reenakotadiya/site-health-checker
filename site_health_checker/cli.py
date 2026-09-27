@@ -22,7 +22,7 @@ def _url(value: str) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="site-health-checker",
-        description="Audit a website for broken links, slow pages, missing alt text, redirect chains and missing titles.",
+        description="Audit a website for accessibility problems, broken links, slow pages, redirect chains and missing titles.",
     )
     parser.add_argument("url", type=_url, help="website to check, e.g. https://example.com")
     parser.add_argument("--max-pages", type=int, default=100, help="maximum pages to crawl (default: 100)")
@@ -31,7 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--slow", type=float, default=2.0, help="page load time in seconds counted as slow (default: 2)")
     parser.add_argument("-o", "--output", default="site-health-report.html", help="HTML report path")
     parser.add_argument("--json", metavar="PATH", help="also save results as JSON (useful in CI pipelines)")
-    parser.add_argument("--no-fail", action="store_true", help="exit with 0 even when broken links are found")
+    parser.add_argument("--min-score", type=int, metavar="N",
+                        help="exit with 1 if the accessibility score is below N (for CI pipelines)")
+    parser.add_argument("--no-fail", action="store_true", help="always exit with 0, even when problems are found")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 
@@ -50,8 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     print(console_summary(result, findings))
     print(f"\nHTML report saved to {Path(args.output).resolve()}")
 
-    # Non-zero exit on broken links lets CI pipelines fail the build.
-    return 1 if findings.broken_links and not args.no_fail else 0
+    # A non-zero exit code lets CI pipelines fail the build.
+    too_low = args.min_score is not None and findings.a11y_score is not None and findings.a11y_score < args.min_score
+    if too_low:
+        print(f"Accessibility score {findings.a11y_score} is below the minimum of {args.min_score}")
+    return 1 if (findings.broken_links or too_low) and not args.no_fail else 0
 
 
 if __name__ == "__main__":

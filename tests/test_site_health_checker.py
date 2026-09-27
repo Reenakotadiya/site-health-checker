@@ -6,8 +6,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
+from site_health_checker import cli
+from site_health_checker.accessibility import Issue
 from site_health_checker.cli import main
-from site_health_checker.crawler import crawl, normalize
+from site_health_checker.crawler import CrawlResult, PageResult, crawl, normalize
 from site_health_checker.report import analyze
 
 PAGES = {
@@ -91,10 +93,11 @@ def test_detects_redirect_chain(findings, site):
     assert chain.final_url == site + "/about"
 
 
-def test_flags_only_images_without_alt_attribute(findings):
+def test_accessibility_issues_and_score(findings, site):
     _, found = findings
-    [page] = found.missing_alt
-    assert page.images_missing_alt == ["logo.png"]  # alt="" is valid for decorative images
+    image_issues = [(page.url, issue.element) for page, issue in found.a11y_issues if issue.rule == "image-alt"]
+    assert image_issues == [(site + "/", '<img src="logo.png">')]  # alt="" is valid for decorative images
+    assert 0 <= found.a11y_score < 100
 
 
 def test_detects_missing_title_and_slow_page(findings, site):
@@ -136,3 +139,14 @@ def test_cli_writes_reports_and_fails_on_broken_links(site, tmp_path):
     assert data["broken_links"][0]["status"] == 404
 
     assert main([site, "-o", str(html), "--no-fail", "--timeout", "5"]) == 0
+
+
+def test_cli_min_score_fails_the_build(monkeypatch, tmp_path):
+    # A site with no broken links, whose only page scores 90 (one critical issue).
+    page = PageResult("https://ok.test/", 200, 0.1, is_html=True, title="Home", a11y_issues=[Issue("image-alt")])
+    monkeypatch.setattr(cli, "crawl", lambda *args, **kwargs: CrawlResult("https://ok.test/", [page], [], 0.1))
+    html = str(tmp_path / "report.html")
+
+    assert main(["https://ok.test", "-o", html]) == 0
+    assert main(["https://ok.test", "-o", html, "--min-score", "90"]) == 0
+    assert main(["https://ok.test", "-o", html, "--min-score", "95"]) == 1
