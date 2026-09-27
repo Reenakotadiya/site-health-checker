@@ -1,6 +1,7 @@
 # 🩺 Site Health Checker
 
 [![Tests](https://github.com/Reenakotadiya/site-health-checker/actions/workflows/tests.yml/badge.svg)](https://github.com/Reenakotadiya/site-health-checker/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/site-health-checker)](https://pypi.org/project/site-health-checker/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -23,7 +24,7 @@ You get a clean **HTML report** you can hand to a developer, a manager or a clie
 ## 🚀 Quick Start
 
 ```bash
-pip install git+https://github.com/Reenakotadiya/site-health-checker.git
+pip install site-health-checker
 
 site-health-checker https://example.com
 ```
@@ -105,7 +106,7 @@ Add this step to any workflow, with nothing to install:
 
 ```yaml
 - name: Check website health
-  uses: Reenakotadiya/site-health-checker@main
+  uses: Reenakotadiya/site-health-checker@v2.0.0
   with:
     url: https://staging.mysite.com
     min-score: 90        # optional: fail if the accessibility score drops below 90
@@ -134,7 +135,7 @@ The results also appear as a **summary table on the workflow run page**, and the
 The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, so any pipeline can block a release with it:
 
 ```bash
-pip install git+https://github.com/Reenakotadiya/site-health-checker.git
+pip install site-health-checker
 site-health-checker https://staging.mysite.com --min-score 90 --json results.json
 ```
 
