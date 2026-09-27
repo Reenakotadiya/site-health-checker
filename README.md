@@ -106,7 +106,7 @@ Add this step to any workflow, with nothing to install:
 
 ```yaml
 - name: Check website health
-  uses: Reenakotadiya/site-health-checker@v2.0.0
+  uses: Reenakotadiya/site-health-checker@v2.0.1
   with:
     url: https://staging.mysite.com
     min-score: 90        # optional: fail if the accessibility score drops below 90
