@@ -102,15 +102,33 @@ site-health-checker https://mysite.com --json results.json  # machine-readable o
 
 ### Option 1: GitHub Action (easiest)
 
-Add this step to any workflow, with nothing to install:
+Add this workflow to your repository (for example `.github/workflows/site-health.yml`), with nothing to install:
 
 ```yaml
-- name: Check website health
-  uses: Reenakotadiya/site-health-checker@v2.0.1
-  with:
-    url: https://staging.mysite.com
-    min-score: 90        # optional: fail if the accessibility score drops below 90
+name: Site health
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write   # lets the action comment on the pull request
+
+jobs:
+  site-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Reenakotadiya/site-health-checker@v2
+        with:
+          url: https://staging.mysite.com
+          min-score: 90        # optional: fail if the accessibility score drops below 90
 ```
+
+**What you get on every run:**
+- 💬 **A pull request comment** with the accessibility score, broken links and other results. It's updated on each push, never duplicated.
+- 📊 **A summary table** on the workflow run page
+- 📄 **The full HTML report** saved as a downloadable artifact
+- ✅ / ❌ **A pass or fail result** you can use to block merges
+
+`@v2` always points to the latest v2 release, so you get fixes automatically. Pin an exact version like `@v2.1.0` if you prefer.
 
 | Input | Default | What it does |
 |---|---|---|
@@ -118,17 +136,17 @@ Add this step to any workflow, with nothing to install:
 | `max-pages` | 100 | Maximum pages to crawl |
 | `min-score` | none | Fail the step if the accessibility score is below this |
 | `fail-on-problems` | true | Set to `false` to report without failing the build |
+| `comment-on-pr` | true | Post and update one comment on pull requests |
+| `upload-report` | true | Save the HTML and JSON reports as an artifact |
+| `artifact-name` | `site-health-report` | Artifact name (change it if you use the action twice in one workflow) |
 | `report-path` | `site-health-report.html` | Where to save the HTML report |
+| `github-token` | `github.token` | Token used for the pull request comment |
 
-The results also appear as a **summary table on the workflow run page**, and the step exposes `accessibility-score` and `broken-links` as outputs. To keep the HTML report, add an upload step:
+**Outputs:** `accessibility-score` and `broken-links`, to use in later steps.
 
-```yaml
-- uses: actions/upload-artifact@v4
-  if: always()
-  with:
-    name: site-health-report
-    path: site-health-report.html
-```
+**Ready-made workflows** in [`examples/`](examples/): [check every pull request](examples/pull-request-check.yml) · [check every night](examples/nightly-check.yml) · [check after deploying](examples/after-deploy.yml)
+
+> Pull requests from forks get a read-only token, so the comment is skipped with a warning. The check itself still runs normally.
 
 ### Option 2: Any CI tool (Jenkins, GitLab, Azure DevOps…)
 

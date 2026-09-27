@@ -1,0 +1,26 @@
+# Check the site right after deploying, and use the score in later steps.
+# Copy the steps into your existing deploy workflow.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ... your build and deploy steps here ...
+
+      - name: Check the deployed site
+        id: health
+        uses: Reenakotadiya/site-health-checker@v2
+        with:
+          url: https://www.example.com
+          min-score: 85
+
+      - name: Use the results
+        if: always()
+        run: echo "Accessibility score is ${{ steps.health.outputs.accessibility-score }}, broken links ${{ steps.health.outputs.broken-links }}"

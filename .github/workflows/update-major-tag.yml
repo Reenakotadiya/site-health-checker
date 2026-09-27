@@ -1,0 +1,28 @@
+name: Update major version tag
+
+# After each release (e.g. v2.1.0), move the "v2" tag to it, so users of
+# "uses: Reenakotadiya/site-health-checker@v2" get the latest fixes automatically.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  move-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Move major tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Skipping: $TAG is not a vX.Y.Z release"; exit 0
+          fi
+          major="${TAG%%.*}"
+          git tag -f "$major" "$TAG"
+          git push -f origin "$major"
+          echo "Moved $major to $TAG"

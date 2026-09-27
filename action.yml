@@ -18,17 +18,29 @@ inputs:
   fail-on-problems:
     description: Fail the step on broken links or a low score. Set to "false" to only report.
     default: "true"
+  comment-on-pr:
+    description: On pull requests, post (and keep updated) one comment with the results. Needs "pull-requests write" permission.
+    default: "true"
+  upload-report:
+    description: Save the HTML and JSON reports as a workflow artifact
+    default: "true"
+  artifact-name:
+    description: Name of the uploaded artifact (change it if you run this action more than once in a workflow)
+    default: site-health-report
   report-path:
     description: Where to save the HTML report
     default: site-health-report.html
+  github-token:
+    description: Token used to comment on pull requests
+    default: ${{ github.token }}
 
 outputs:
   accessibility-score:
-    description: Site-wide accessibility score out of 100
-    value: ${{ steps.check.outputs.accessibility-score }}
+    description: Site-wide accessibility score out of 100 (empty if the site could not be loaded)
+    value: ${{ steps.summary.outputs.accessibility-score }}
   broken-links:
     description: Number of broken links found
-    value: ${{ steps.check.outputs.broken-links }}
+    value: ${{ steps.summary.outputs.broken-links }}
 
 runs:
   using: composite
@@ -56,19 +68,37 @@ runs:
         [ "$FAIL" = "false" ] && args+=(--no-fail)
         status=0
         site-health-checker "${args[@]}" || status=$?
-        python -c "
-        import json, os
-        data = json.load(open('site-health-results.json'))
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-            out.write(f\"accessibility-score={data['accessibility']['score']}\n\")
-            out.write(f\"broken-links={len(data['broken_links'])}\n\")
-        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-            summary.write(f\"### Site Health: {data['start_url']}\n\n\")
-            summary.write(f\"| Check | Result |\n|---|---|\n\")
-            summary.write(f\"| Accessibility score | {data['accessibility']['score']}/100 ({len(data['accessibility']['issues'])} issues) |\n\")
-            summary.write(f\"| Broken links | {len(data['broken_links'])} |\n\")
-            summary.write(f\"| Slow pages | {len(data['slow_pages'])} |\n\")
-            summary.write(f\"| Redirect chains | {len(data['redirect_chains'])} |\n\")
-            summary.write(f\"| Missing titles | {len(data['missing_titles'])} |\n\")
-        "
-        exit $status
+        # Report and comment first; the final step fails the job if needed.
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+
+    - name: Summary and pull request comment
+      id: summary
+      if: always()
+      shell: bash
+      env:
+        SHC_URL: ${{ inputs.url }}
+        SHC_TOKEN: ${{ inputs.github-token }}
+        SHC_COMMENT: ${{ inputs.comment-on-pr }}
+      run: python -m site_health_checker.github_action site-health-results.json
+
+    - name: Upload report
+      if: always() && inputs.upload-report == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.report-path }}
+          site-health-results.json
+        if-no-files-found: ignore
+
+    - name: Result
+      shell: bash
+      env:
+        URL: ${{ inputs.url }}
+        CODE: ${{ steps.check.outputs.exit-code }}
+      run: |
+        case "$CODE" in
+          0) echo "Site Health Checker passed." ;;
+          2) echo "::error::The website could not be loaded: $URL"; exit 2 ;;
+          *) echo "::error::Site Health Checker found problems (broken links or a low accessibility score)."; exit "$CODE" ;;
+        esac

@@ -1,0 +1,19 @@
+# Check your site on every pull request and post the results as a PR comment.
+# Copy this file to .github/workflows/site-health.yml in your repository.
+name: Site health
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # lets the action comment on the pull request
+
+jobs:
+  site-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Reenakotadiya/site-health-checker@v2
+        with:
+          url: https://staging.example.com   # your preview or staging URL
+          min-score: 90                      # fail if accessibility drops below 90

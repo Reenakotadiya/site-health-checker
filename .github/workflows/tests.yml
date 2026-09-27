@@ -35,6 +35,9 @@ jobs:
 
   github-action:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -51,3 +54,14 @@ jobs:
           echo "Score: ${{ steps.health.outputs.accessibility-score }}, broken links: ${{ steps.health.outputs.broken-links }}"
           test -n "${{ steps.health.outputs.accessibility-score }}"
           test -f site-health-report.html
+
+      - name: Run the action on a site that doesn't exist
+        id: unreachable
+        continue-on-error: true
+        uses: ./
+        with:
+          url: https://this-site-does-not-exist.invalid
+          artifact-name: unreachable-report
+
+      - name: It must fail
+        run: test "${{ steps.unreachable.outcome }}" = "failure"
