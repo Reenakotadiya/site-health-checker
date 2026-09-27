@@ -150,3 +150,14 @@ def test_cli_min_score_fails_the_build(monkeypatch, tmp_path):
     assert main(["https://ok.test", "-o", html]) == 0
     assert main(["https://ok.test", "-o", html, "--min-score", "90"]) == 0
     assert main(["https://ok.test", "-o", html, "--min-score", "95"]) == 1
+
+
+def test_cli_reports_a_site_that_does_not_load(site, tmp_path, capsys):
+    html = tmp_path / "report.html"
+    # Unreachable address: nothing listens on port 9.
+    assert main(["http://127.0.0.1:9", "-o", str(html), "--timeout", "2", "--no-fail"]) == 2
+    assert "did not load" in capsys.readouterr().err
+    # A start page that returns 404.
+    assert main([site + "/missing", "-o", str(html), "--timeout", "5"]) == 2
+    assert "HTTP 404" in capsys.readouterr().err
+    assert not html.exists()  # no misleading all-green report

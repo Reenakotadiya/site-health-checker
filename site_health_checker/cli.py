@@ -43,6 +43,15 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Checking {args.url} (up to {args.max_pages} pages)...")
     result = crawl(args.url, max_pages=args.max_pages, workers=args.workers, timeout=args.timeout)
+
+    # If the start page itself didn't load, every check would pass on an empty site. Say so instead.
+    start = result.pages[0] if result.pages else None
+    if start is None or start.status is None or start.status >= 400:
+        reason = ("blocked by robots.txt" if start is None
+                  else f"HTTP {start.status}" if start.status else start.error or "no response")
+        print(f"Could not check {args.url}: the page did not load ({reason}).", file=sys.stderr)
+        return 2
+
     findings = analyze(result, slow_threshold=args.slow)
 
     Path(args.output).write_text(to_html(result, findings, args.slow), encoding="utf-8")

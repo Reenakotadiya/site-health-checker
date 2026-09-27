@@ -132,7 +132,7 @@ The results also appear as a **summary table on the workflow run page**, and the
 
 ### Option 2: Any CI tool (Jenkins, GitLab, Azure DevOps…)
 
-The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, so any pipeline can block a release with it:
+The tool **exits with code 1 when broken links are found, or when the accessibility score drops below `--min-score`**, and with **code 2 if the website can't be loaded at all** (site down, typo in the address), so any pipeline can block a release with it:
 
 ```bash
 pip install site-health-checker
